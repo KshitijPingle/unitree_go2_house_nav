@@ -1,1 +1,0 @@
-/home/kshitij/Documents/unitree_go2_house_nav/build/go2_slam/ament_cmake_environment_hooks/local_setup.sh
