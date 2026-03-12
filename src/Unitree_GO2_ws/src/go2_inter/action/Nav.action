@@ -1,6 +1,0 @@
-float32 dx
-float32 dy
----
-geometry_msgs/Point point
----
-float32 distance

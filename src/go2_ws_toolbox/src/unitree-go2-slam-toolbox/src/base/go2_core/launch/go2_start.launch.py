@@ -15,6 +15,7 @@ def generate_launch_description():
     go2_core_pkg = get_package_share_directory("go2_core")
     go2_slam_pkg = get_package_share_directory("go2_slam")
     go2_perception_pkg = get_package_share_directory("go2_perception")
+    go2_goal_pkg = get_package_share_directory("go2_goal_nav")
     
     # 添加启动开关
     use_slamtoolbox = DeclareLaunchArgument(
@@ -58,6 +59,14 @@ def generate_launch_description():
         arguments=['-d', os.path.join(go2_core_pkg, "rviz2", "display.rviz")],
         output='screen'
     )
+    
+    nav_service_node = Node(
+        package='go2_goal_nav',
+        executable='goal_subscriber',
+        name='goal_subscriber_node',
+        output='screen',
+        parameters=[os.path.join(go2_goal_pkg, 'params', 'nav_params.yaml')]
+    )
 
     return LaunchDescription([
         go2_driver_launch,
@@ -65,5 +74,6 @@ def generate_launch_description():
         go2_robot_localization,
         go2_pointcloud_launch,
         go2_slamtoolbox_launch,
-        rviz_node
+        rviz_node,
+        nav_service_node
     ])

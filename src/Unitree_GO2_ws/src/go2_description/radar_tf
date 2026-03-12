@@ -1,1 +1,0 @@
-ros2 run tf2_ros static_transform_publisher --frame-id radar --child-frame-id utildar_lidar
