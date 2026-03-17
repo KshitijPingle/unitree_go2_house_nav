@@ -15,7 +15,7 @@ Then build the project
 `colcon build --symlink-install`  
 
 Always source the setup.bash before running scripts  
-`source install/locacl_setup.bash`  
+`source install/local_setup.bash`  
 
 ## Launch Navigation (IN PROGRESS)  
 `ros2 launch go2_core go2_start.launch.py`  
