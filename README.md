@@ -8,7 +8,7 @@ Humble
 Git clone this repo using:  
 `https://github.com/KshitijPingle/unitree_go2_house_nav.git`    
 
-Add third party dependencies using rosdep  
+Add third party dependencies using rosdep   
 `rosdep install --from-paths src --ignore-src -y -r`  
 
 Then build the project  
@@ -16,6 +16,12 @@ Then build the project
 
 Always source the setup.bash before running scripts  
 `source install/setup.bash`  
+
+## Launch Navigation (IN PROGRESS)  
+`ros2 launch go2_core go2_start.launch.py`  
+
+Additionally, control the robot using your own keyboard with:  
+`ros2 run teleop_twist_keyboard teleop_twist_keyboard`  
 
 
 ## Node Documentation
