@@ -6,7 +6,7 @@ Humble
 
 ## Setup Instructions  
 Git clone this repo using:  
-`https://github.com/KshitijPingle/unitree_go2_house_nav.git`    
+`git clone https://github.com/KshitijPingle/unitree_go2_house_nav.git`    
 
 Add third party dependencies using rosdep   
 `rosdep install --from-paths src --ignore-src -y -r`  
