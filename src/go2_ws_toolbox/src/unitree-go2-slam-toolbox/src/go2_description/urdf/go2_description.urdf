@@ -2,7 +2,7 @@
 <robot
   name="go2_description">
   <link
-    name="base">
+    name="base_link">
     <inertial>
       <origin
         xyz="0.021112 0 -0.005366"
@@ -56,7 +56,7 @@
       xyz="0.285 0 0.01"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="Head_upper" />
     <axis
@@ -130,7 +130,7 @@
       xyz="0.1934 0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="FL_hip" />
     <axis
@@ -389,7 +389,7 @@
       xyz="0.1934 -0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="FR_hip" />
     <axis
@@ -648,7 +648,7 @@
       xyz="-0.1934 0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="RL_hip" />
     <axis
@@ -907,7 +907,7 @@
       xyz="-0.1934 -0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="RR_hip" />
     <axis
@@ -1146,7 +1146,7 @@
       xyz="-0.02557 0 0.04232"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="imu" />
     <axis
@@ -1176,7 +1176,7 @@
       xyz="0.28945 0 -0.046825"
       rpy="0 2.8782 0" />
     <parent
-      link="base" />
+      link="base_link" />
     <child
       link="radar" />
     <axis
