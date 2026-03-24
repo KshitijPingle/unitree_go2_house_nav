@@ -108,7 +108,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FL_hip.dae" />
+          filename="package://go2_description/dae/hip.dae" />
       </geometry>
       <material
         name="">
@@ -163,7 +163,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FL_thigh.dae" />
+          filename="package://go2_description/dae/thigh.dae" />
       </geometry>
       <material
         name="">
@@ -218,7 +218,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FL_calf.dae" />
+          filename="package://go2_description/dae/calf.dae" />
       </geometry>
       <material
         name="">
@@ -317,7 +317,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FL_foot.dae" />
+          filename="package://go2_description/dae/foot.dae" />
       </geometry>
       <material
         name="">
@@ -367,7 +367,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FR_hip.dae" />
+          filename="package://go2_description/dae/hip.dae" />
       </geometry>
       <material
         name="">
@@ -422,7 +422,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FR_thigh.dae" />
+          filename="package://go2_description/dae/thigh_mirror.dae" />
       </geometry>
       <material
         name="">
@@ -477,7 +477,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FR_calf.dae" />
+          filename="package://go2_description/dae/calf_mirror.dae" />
       </geometry>
       <material
         name="">
@@ -576,7 +576,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/FR_foot.dae" />
+          filename="package://go2_description/dae/foot.dae" />
       </geometry>
       <material
         name="">
@@ -626,7 +626,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RL_hip.dae" />
+          filename="package://go2_description/dae/hip.dae" />
       </geometry>
       <material
         name="">
@@ -681,7 +681,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RL_thigh.dae" />
+          filename="package://go2_description/dae/thigh.dae" />
       </geometry>
       <material
         name="">
@@ -736,7 +736,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RL_calf.dae" />
+          filename="package://go2_description/dae/calf.dae" />
       </geometry>
       <material
         name="">
@@ -835,7 +835,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RL_foot.dae" />
+          filename="package://go2_description/dae/foot.dae" />
       </geometry>
       <material
         name="">
@@ -885,7 +885,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RR_hip.dae" />
+          filename="package://go2_description/dae/hip.dae" />
       </geometry>
       <material
         name="">
@@ -940,7 +940,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RR_thigh.dae" />
+          filename="package://go2_description/dae/thigh_mirror.dae" />
       </geometry>
       <material
         name="">
@@ -995,7 +995,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RR_calf.dae" />
+          filename="package://go2_description/dae/calf_mirror.dae" />
       </geometry>
       <material
         name="">
@@ -1094,7 +1094,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/RR_foot.dae" />
+          filename="package://go2_description/dae/foot.dae" />
       </geometry>
       <material
         name="">

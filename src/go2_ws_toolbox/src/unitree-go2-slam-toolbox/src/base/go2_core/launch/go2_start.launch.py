@@ -15,7 +15,27 @@ def generate_launch_description():
     go2_core_pkg = get_package_share_directory("go2_core")
     go2_slam_pkg = get_package_share_directory("go2_slam")
     go2_perception_pkg = get_package_share_directory("go2_perception")
-    go2_goal_pkg = get_package_share_directory("go2_goal_nav")
+    go2_goal_pkg = get_package_share_directory("go2_goal_nav")			# Added by Mar J
+    go2_description_pkg = get_package_share_directory("go2_description")	# Added by Kshitij
+    
+    # Path to your URDF file
+    urdf_file = os.path.join(go2_description_pkg, 'urdf', 'go2_description.urdf')
+    
+    # Read the URDF file content
+    with open(urdf_file, 'r') as infp:
+        robot_description_config = infp.read()
+    
+    # Create the Robot State Publisher node
+    robot_state_publisher_node = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{
+            'robot_description': robot_description_config,
+            'use_sim_time': False
+        }]
+    )
     
     # 添加启动开关
     use_slamtoolbox = DeclareLaunchArgument(
@@ -60,6 +80,7 @@ def generate_launch_description():
         output='screen'
     )
     
+    # Added by Mar J
     nav_service_node = Node(
         package='go2_goal_nav',
         executable='goal_subscriber',
@@ -70,6 +91,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         go2_driver_launch,
+        robot_state_publisher_node,
         use_slamtoolbox,
         go2_robot_localization,
         go2_pointcloud_launch,
