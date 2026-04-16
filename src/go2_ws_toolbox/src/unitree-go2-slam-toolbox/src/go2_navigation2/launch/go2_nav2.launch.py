@@ -15,6 +15,7 @@ def generate_launch_description():
     get_bringup_pkg = get_package_share_directory("nav2_bringup")
     go2_description_pkg = get_package_share_directory("go2_description")
     go2_core_pkg = get_package_share_directory("go2_core")
+    go2_obstacle_pkg = get_package_share_directory("go2_obstacle_avoidance")
 
     use_sim_time = launch.substitutions.LaunchConfiguration('use_sim_time', default='false')
     # map_yaml_path = launch.substitutions.LaunchConfiguration(
@@ -66,6 +67,19 @@ def generate_launch_description():
         }]
     )
 
+    # --- obstacle_avoidance ---
+    go2_obstacle_avoidance = Node(
+        package='go2_obstacle_avoidance',
+        executable='obstacle_avoidance_node.py',
+        name='go2_obstacle_avoidance',
+        output='screen',
+        parameters=[os.path.join(
+            go2_obstacle_pkg,
+            'config',
+            'obstacle_avoidance.yaml'
+        )]
+    )
+
     # 里程计融合imu
     go2_robot_localization = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -86,7 +100,10 @@ def generate_launch_description():
     # --- 驱动 ---
     go2_driver = Node(
         package="go2_driver",
-        executable="driver"
+        executable="driver",
+        remappings=[
+            ('/cmd_vel', '/cmd_vel_safe')
+        ]
     )
 
     # 包含scan话题
@@ -110,7 +127,6 @@ def generate_launch_description():
         )
 
     return LaunchDescription([
-        go2_driver,
         map_server,
         amcl,
         lifecycle_manager,
@@ -120,5 +136,7 @@ def generate_launch_description():
         go2_robot_localization,
         rviz2,
         cloud_launch,
+        go2_obstacle_avoidance,
+        go2_driver,
         go2_display_launch
     ])
