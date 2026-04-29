@@ -11,6 +11,8 @@ find_package(rclcpp REQUIRED)
 find_package(unitree_go REQUIRED)
 find_package(unitree_api REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 add_executable(navigation src/navigation.cpp)
 target_include_directories(navigation PUBLIC
@@ -23,6 +25,8 @@ ament_target_dependencies(
   "unitree_go"
   "unitree_api"
   "nav_msgs"
+  "geometry_msgs"
+  "sensor_msgs"
 )
 
 install(TARGETS navigation
