@@ -19,15 +19,16 @@ class ObstacleAvoidanceNode(Node):
         self.declare_parameter('output_cmd_topic', '/cmd_vel_safe')
         self.declare_parameter('status_topic', '/obstacle_avoidance/status')
 
-        self.declare_parameter('front_angle_deg', 30.0)
-        self.declare_parameter('side_angle_deg', 70.0)
+        self.declare_parameter('front_angle_deg', 45.0)
+        self.declare_parameter('side_angle_deg', 90.0)
 
-        self.declare_parameter('stop_distance', 0.45)
-        self.declare_parameter('slow_distance', 0.80)
-        self.declare_parameter('turn_slow_distance', 0.40)
+        self.declare_parameter('stop_distance', 0.70)
+        self.declare_parameter('slow_distance', 1.0)
+
+        self.declare_parameter('resume_distance', 0.90)
+        self.declare_parameter('turn_speed', 0.80)
 
         self.declare_parameter('max_linear_scale_when_slow', 0.25)
-        self.declare_parameter('max_angular_scale_when_blocked', 0.40)
 
         self.declare_parameter('min_valid_range', 0.05)
         self.declare_parameter('max_valid_range', 8.0)
@@ -44,6 +45,9 @@ class ObstacleAvoidanceNode(Node):
         self.slow_distance = float(self.get_parameter('slow_distance').value)
         self.turn_slow_distance = float(self.get_parameter('turn_slow_distance').value)
 
+        self.resume_distance = float(self.get_parameter('resume_distance').value)
+        self.turn_speed = float(self.get_parameter('turn_speed').value)
+
         self.max_linear_scale_when_slow = float(self.get_parameter('max_linear_scale_when_slow').value)
         self.max_angular_scale_when_blocked = float(self.get_parameter('max_angular_scale_when_blocked').value)
 
@@ -56,6 +60,12 @@ class ObstacleAvoidanceNode(Node):
         self.front_min = math.inf
         self.left_min = math.inf
         self.right_min = math.inf
+        self.left_clearance = math.inf
+        self.right_clearance = math.inf
+
+
+        self.turning = False
+        self.turn_direction = 1.0
 
         self.scan_sub = self.create_subscription(LaserScan, self.scan_topic, self.scan_callback, 10)
         self.cmd_sub = self.create_subscription(Twist, self.input_cmd_topic, self.cmd_callback, 10)
@@ -85,9 +95,9 @@ class ObstacleAvoidanceNode(Node):
             if self.is_valid_range(r):
                 if -front_half <= angle <= front_half:
                     front_ranges.append(r)
-                if 0.0 < angle <= side_half:
+                elif front_half < angle <= side_half:
                     left_ranges.append(r)
-                if -side_half <= angle < 0.0:
+                elif -side_half <= angle < -front_half:
                     right_ranges.append(r)
             angle += msg.angle_increment
 
@@ -95,8 +105,20 @@ class ObstacleAvoidanceNode(Node):
         self.left_min = min(left_ranges) if left_ranges else math.inf
         self.right_min = min(right_ranges) if right_ranges else math.inf
 
+        self.left_clearance = self.median_or_inf(left_ranges)
+        self.right_clearance = self.median_or_inf(right_ranges)
+
     def is_valid_range(self, r: float) -> bool:
         return math.isfinite(r) and self.min_valid_range <= r <= self.max_valid_range
+    
+    def median_or_inf(self, values: List[float]) -> float:
+        if not values:
+            return math.inf
+        vals = sorted(values)
+        n = len(vals)
+        if n % 2 == 1:
+            return vals[n // 2]
+        return 0.5 * (vals[n // 2 - 1] + vals[n // 2])
 
     def control_loop(self) -> None:
         safe_cmd = Twist()
@@ -116,18 +138,40 @@ class ObstacleAvoidanceNode(Node):
 
         moving_forward = safe_cmd.linear.x > 0.01
 
-        if moving_forward and self.front_min < self.stop_distance:
+        if self.turning:
             safe_cmd.linear.x = 0.0
-            status = 'STOP_FRONT_OBSTACLE'
+            safe_cmd.linear.y = 0.0
+            safe_cmd.linear.z = 0.0
+            safe_cmd.angular.x = 0.0
+            safe_cmd.angular.y = 0.0
 
-            if self.left_min < self.right_min:
-                safe_cmd.angular.z = min(safe_cmd.angular.z, 0.0)
-                if abs(safe_cmd.angular.z) < 0.1:
-                    safe_cmd.angular.z = -self.max_angular_scale_when_blocked
+            if self.front_min > self.resume_distance:
+                safe_cmd.angular.z = 0.0
+                self.turning = False
+                status = 'CLEAR_AFTER_TURN'
             else:
-                safe_cmd.angular.z = max(safe_cmd.angular.z, 0.0)
-                if abs(safe_cmd.angular.z) < 0.1:
-                    safe_cmd.angular.z = self.max_angular_scale_when_blocked
+                safe_cmd.angular.z = self.turn_direction * self.turn_speed
+                status = 'TURNING_LEFT' if self.turn_direction > 0 else 'TURNING_RIGHT'
+
+        elif self.front_min < self.stop_distance:
+            safe_cmd.linear.x = 0.0
+            safe_cmd.linear.y = 0.0
+            safe_cmd.linear.z = 0.0
+            safe_cmd.angular.x = 0.0
+            safe_cmd.angular.y = 0.0
+            safe_cmd.angular.z = 0.0
+
+            if math.isfinite(self.left_clearance) and math.isfinite(self.right_clearance):
+                self.turn_direction = 1.0 if self.left_clearance > self.right_clearance else -1.0
+            elif math.isfinite(self.left_clearance):
+                self.turn_direction = 1.0
+            elif math.isfinite(self.right_clearance):
+                self.turn_direction = -1.0
+            else:
+                self.turn_direction = 1.0
+
+            self.turning = True
+            status = 'STOP_FRONT_OBSTACLE'
 
         elif moving_forward and self.front_min < self.slow_distance:
             scale = max(
@@ -137,18 +181,6 @@ class ObstacleAvoidanceNode(Node):
             scale = min(max(scale, self.max_linear_scale_when_slow), 1.0)
             safe_cmd.linear.x *= scale
             status = f'SLOW_FRONT_OBSTACLE scale={scale:.2f}'
-
-        turning = abs(safe_cmd.angular.z) > 0.05
-        if turning:
-            if safe_cmd.angular.z > 0.0 and self.left_min < self.turn_slow_distance:
-                safe_cmd.angular.z *= self.max_angular_scale_when_blocked
-                if status == 'CLEAR':
-                    status = 'SLOW_LEFT_TURN'
-            elif safe_cmd.angular.z < 0.0 and self.right_min < self.turn_slow_distance:
-                safe_cmd.angular.z *= self.max_angular_scale_when_blocked
-                if status == 'CLEAR':
-                    status = 'SLOW_RIGHT_TURN'
-
         self.cmd_pub.publish(safe_cmd)
         self.publish_status(f'{status} | front={self.front_min:.2f} left={self.left_min:.2f} right={self.right_min:.2f}')
 
