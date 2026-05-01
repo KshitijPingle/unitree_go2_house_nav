@@ -68,6 +68,10 @@ public:
     occupied_threshold_ = declare_parameter<int>("occupied_threshold", 65);
     unknown_is_blocked_ = declare_parameter<bool>("unknown_is_blocked", true);
 
+    // Replan frontier goals as SLAM/map updates arrive.
+    // This is what makes exploration frontier-based instead of one-time coverage.
+    frontier_replan_seconds_ = declare_parameter<double>("frontier_replan_seconds", 2.0);
+
     cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
 
     scan_sub_ = create_subscription<sensor_msgs::msg::LaserScan>(
@@ -328,10 +332,6 @@ private:
     frontiers.reserve(goals.size());
     for (const FrontierGoal & goal : goals) {
       frontiers.push_back(goal.waypoint);
-
-      RCLCPP_INFO(this->get_logger(),
-        "New frontier goal selected: x=%.2f y=%.2f travel_cost=%d",
-        goal.waypoint.x, goal.waypoint.y, goal.travel_cost);
     }
 
     return frontiers;
@@ -404,12 +404,19 @@ private:
 
     if (!have_odom_) return;
 
-    if (!generated_waypoints_) {
-      if (mode_ == "explore") {
+    if (mode_ == "explore") {
+      const auto now = this->now();
+
+      // Frontier exploration should update as SLAM discovers new free/unknown
+      // boundaries. Replan on the first map and then periodically as maps arrive.
+      if (!generated_waypoints_ ||
+          (now - last_frontier_plan_time_).seconds() >= frontier_replan_seconds_) {
         generateCoverageWaypoints();
-      } else {
-        generateStraightLineWaypoints();
+        generated_waypoints_ = true;
+        last_frontier_plan_time_ = now;
       }
+    } else if (!generated_waypoints_) {
+      generateStraightLineWaypoints();
       generated_waypoints_ = true;
     }
   }
@@ -447,7 +454,7 @@ private:
     current_waypoint_index_ = 0;
 
     if (waypoints_.empty()) {
-      RCLCPP_WARN(get_logger(), "No frontiers detected; falling back to lawnmower coverage.");
+      RCLCPP_WARN(get_logger(), "No frontier goals detected; falling back to lawnmower coverage.");
       waypoints_ = generateLawnmowerCoverageWaypoints();
       current_waypoint_index_ = 0;
       if (waypoints_.empty()) {
@@ -640,6 +647,8 @@ private:
 
   int occupied_threshold_ = 65;
   bool unknown_is_blocked_ = true;
+  double frontier_replan_seconds_ = 2.0;
+  rclcpp::Time last_frontier_plan_time_{0, 0, RCL_ROS_TIME};
 
   double robot_x_ = 0.0;
   double robot_y_ = 0.0;
