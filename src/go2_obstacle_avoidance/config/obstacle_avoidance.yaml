@@ -1,0 +1,25 @@
+go2_obstacle_avoidance:
+  ros__parameters:
+    scan_topic: /scan
+    input_cmd_topic: /cmd_vel
+    output_cmd_topic: /cmd_vel_safe
+    status_topic: /obstacle_avoidance/status
+
+    front_angle_deg: 20.0
+    side_angle_deg: 55.0
+
+    stop_distance: 0.60
+    slow_distance: 0.75
+    resume_distance: 0.60
+    turn_timeout: 3.5
+    clear_confirm_cycles: 3
+    min_front_points_for_clear: 6
+    turn_switch_margin: 0.10
+    turn_speed: 1.40
+    turn_slow_distance: 0.40
+
+    max_linear_scale_when_slow: 0.25
+    max_angular_scale_when_blocked: 0.40
+
+    min_valid_range: 0.05
+    max_valid_range: 8.0
