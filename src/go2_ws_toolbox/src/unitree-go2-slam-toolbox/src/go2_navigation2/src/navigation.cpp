@@ -15,17 +15,42 @@
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 
+/**
+ * NavigationNode implements a ROS2 navigation controller for Unitree GO2.
+ *
+ * Supported modes:
+ *   - "goal": follow a straight-line path to a fixed target waypoint.
+ *   - "explore": perform frontier-based exploration on an occupancy grid.
+ *
+ * The node subscribes to odometry, occupancy grid, and laser scan data, and
+ * publishes velocity commands. Isaac Sim compatibility is supported via
+ * configurable simulated topic namespaces.
+ */
 class NavigationNode : public rclcpp::Node
 {
 public:
+  /**
+   * Construct the navigation node, declare parameters, and initialize ROS2
+   * publishers/subscribers and the main control timer.
+   */
   NavigationNode() : Node("go2_navigation_node")
   {
-    scan_topic_ = declare_parameter<std::string>("scan_topic", "/scan");
-    odom_topic_ = declare_parameter<std::string>("odom_topic", "/odom");
-    map_topic_ = declare_parameter<std::string>("map_topic", "/map");
-    cmd_vel_topic_ = declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    sim_mode_ = declare_parameter<bool>("sim_mode", false);
+    isaac_namespace_ = declare_parameter<std::string>("isaac_namespace", "/isaac");
 
     mode_ = declare_parameter<std::string>("mode", "explore");  // "goal" or "explore"
+
+    if (sim_mode_) {
+      scan_topic_ = declare_parameter<std::string>("scan_topic", isaac_namespace_ + "/scan");
+      odom_topic_ = declare_parameter<std::string>("odom_topic", isaac_namespace_ + "/odom");
+      map_topic_ = declare_parameter<std::string>("map_topic", isaac_namespace_ + "/map");
+      cmd_vel_topic_ = declare_parameter<std::string>("cmd_vel_topic", isaac_namespace_ + "/cmd_vel");
+    } else {
+      scan_topic_ = declare_parameter<std::string>("scan_topic", "/scan");
+      odom_topic_ = declare_parameter<std::string>("odom_topic", "/odom");
+      map_topic_ = declare_parameter<std::string>("map_topic", "/map");
+      cmd_vel_topic_ = declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    }
     target_x_ = declare_parameter<double>("target_x", 2.0);
     target_y_ = declare_parameter<double>("target_y", 0.0);
 
@@ -62,6 +87,11 @@ public:
       std::bind(&NavigationNode::controlLoop, this));
 
     RCLCPP_INFO(get_logger(), "Navigation node started in mode='%s'.", mode_.c_str());
+    RCLCPP_INFO(get_logger(), "sim_mode='%s'", sim_mode_ ? "true" : "false");
+    RCLCPP_INFO(get_logger(), "odom_topic='%s'", odom_topic_.c_str());
+    RCLCPP_INFO(get_logger(), "scan_topic='%s'", scan_topic_.c_str());
+    RCLCPP_INFO(get_logger(), "map_topic='%s'", map_topic_.c_str());
+    RCLCPP_INFO(get_logger(), "cmd_vel_topic='%s'", cmd_vel_topic_.c_str());
   }
 
 private:
@@ -104,6 +134,10 @@ private:
       y < static_cast<int>(latest_map_->info.height);
   }
 
+  /**
+   * Return true if a map cell is considered traversable.
+   * Unknown cells are treated as free when unknown_is_blocked_ is false.
+   */
   bool isFreeCell(int x, int y) const
   {
     if (!inMap(x, y)) return false;
@@ -115,6 +149,188 @@ private:
     }
 
     return value < occupied_threshold_;
+  }
+
+  /**
+   * Return true when a free cell borders unknown map space, making it a
+   * candidate frontier cell for exploration.
+   */
+  bool isFrontierCell(int x, int y) const
+  {
+    if (!isFreeCell(x, y)) return false;
+
+    static const int dx[4] = {1, -1, 0, 0};
+    static const int dy[4] = {0, 0, 1, -1};
+
+    for (int i = 0; i < 4; ++i) {
+      const int nx = x + dx[i];
+      const int ny = y + dy[i];
+      if (!inMap(nx, ny)) continue;
+      const int value = latest_map_->data[mapIndex(nx, ny)];
+      if (value < 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Return the 4-connected neighbor cells for the given grid coordinate.
+   */
+  std::vector<Cell> getCellNeighbors(const Cell & cell) const
+  {
+    static const int dx[4] = {1, -1, 0, 0};
+    static const int dy[4] = {0, 0, 1, -1};
+
+    std::vector<Cell> neighbors;
+    for (int i = 0; i < 4; ++i) {
+      neighbors.push_back({cell.x + dx[i], cell.y + dy[i]});
+    }
+    return neighbors;
+  }
+
+  std::vector<Waypoint> findFrontierWaypoints() const
+  {
+    struct FrontierGoal
+    {
+      Waypoint waypoint;
+      int travel_cost;
+    };
+
+    std::vector<Waypoint> frontiers;
+    if (!latest_map_ || !have_odom_) {
+      return frontiers;
+    }
+
+    const int width = static_cast<int>(latest_map_->info.width);
+    const int height = static_cast<int>(latest_map_->info.height);
+    if (width <= 0 || height <= 0) {
+      return frontiers;
+    }
+
+    const Cell start = worldToCell(robot_x_, robot_y_);
+    if (!inMap(start.x, start.y) || !isFreeCell(start.x, start.y)) {
+      return frontiers;
+    }
+
+    std::vector<char> visited(width * height, 0);
+    std::vector<char> frontier_mask(width * height, 0);
+    std::vector<int> distance(width * height, -1);
+    std::queue<Cell> queue;
+
+    const int start_index = mapIndex(start.x, start.y);
+    queue.push(start);
+    visited[start_index] = 1;
+    distance[start_index] = 0;
+
+    std::vector<Cell> frontier_cells;
+
+    while (!queue.empty()) {
+      const Cell current = queue.front();
+      queue.pop();
+      const int current_index = mapIndex(current.x, current.y);
+
+      if (isFrontierCell(current.x, current.y)) {
+        frontier_cells.push_back(current);
+        frontier_mask[current_index] = 1;
+      }
+
+      for (const Cell & neighbor : getCellNeighbors(current)) {
+        if (!inMap(neighbor.x, neighbor.y)) {
+          continue;
+        }
+
+        const int neighbor_index = mapIndex(neighbor.x, neighbor.y);
+        if (visited[neighbor_index]) {
+          continue;
+        }
+
+        if (!isFreeCell(neighbor.x, neighbor.y)) {
+          continue;
+        }
+
+        visited[neighbor_index] = 1;
+        distance[neighbor_index] = distance[current_index] + 1;
+        queue.push(neighbor);
+      }
+    }
+
+    if (frontier_cells.empty()) {
+      return frontiers;
+    }
+
+    std::vector<char> clustered(width * height, 0);
+    std::vector<FrontierGoal> goals;
+    goals.reserve(32);
+
+    for (const Cell & frontier_cell : frontier_cells) {
+      const int index = mapIndex(frontier_cell.x, frontier_cell.y);
+      if (clustered[index]) {
+        continue;
+      }
+
+      int cluster_cost = std::numeric_limits<int>::max();
+      Cell best_cell = frontier_cell;
+      double sum_x = 0.0;
+      double sum_y = 0.0;
+      int count = 0;
+      std::queue<Cell> cluster_queue;
+      cluster_queue.push(frontier_cell);
+      clustered[index] = 1;
+
+      while (!cluster_queue.empty()) {
+        const Cell current = cluster_queue.front();
+        cluster_queue.pop();
+        const int current_index = mapIndex(current.x, current.y);
+
+        sum_x += static_cast<double>(current.x);
+        sum_y += static_cast<double>(current.y);
+        ++count;
+
+        const int current_cost = distance[current_index];
+        if (current_cost >= 0 && current_cost < cluster_cost) {
+          cluster_cost = current_cost;
+          best_cell = current;
+        }
+
+        for (const Cell & neighbor : getCellNeighbors(current)) {
+          if (!inMap(neighbor.x, neighbor.y)) {
+            continue;
+          }
+
+          const int neighbor_index = mapIndex(neighbor.x, neighbor.y);
+          if (clustered[neighbor_index] || !frontier_mask[neighbor_index]) {
+            continue;
+          }
+
+          clustered[neighbor_index] = 1;
+          cluster_queue.push(neighbor);
+        }
+      }
+
+      if (count > 0) {
+        if (cluster_cost < 0) {
+          cluster_cost = std::numeric_limits<int>::max();
+        }
+        goals.push_back({cellToWorld(best_cell.x, best_cell.y), cluster_cost});
+      }
+    }
+
+    std::sort(goals.begin(), goals.end(), [this](const FrontierGoal & a, const FrontierGoal & b) {
+      if (a.travel_cost != b.travel_cost) {
+        return a.travel_cost < b.travel_cost;
+      }
+      return std::hypot(a.waypoint.x - robot_x_, a.waypoint.y - robot_y_) <
+             std::hypot(b.waypoint.x - robot_x_, b.waypoint.y - robot_y_);
+    });
+
+    frontiers.reserve(goals.size());
+    for (const FrontierGoal & goal : goals) {
+      frontiers.push_back(goal.waypoint);
+    }
+
+    return frontiers;
   }
 
   Cell worldToCell(double wx, double wy) const
@@ -173,6 +389,10 @@ private:
     have_odom_ = true;
   }
 
+  /**
+   * Handle incoming map updates and trigger waypoint generation when
+   * odometry is already available.
+   */
   void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
   {
     latest_map_ = msg;
@@ -190,6 +410,10 @@ private:
     }
   }
 
+  /**
+   * Create a simple straight-line sequence of intermediate waypoints between
+   * the current robot pose and the configured target coordinate.
+   */
   void generateStraightLineWaypoints()
   {
     waypoints_.clear();
@@ -208,14 +432,41 @@ private:
     RCLCPP_INFO(get_logger(), "Generated %zu goal-navigation waypoints.", waypoints_.size());
   }
 
+  /**
+   * Generate exploration waypoints for the current map.
+   * Tries frontier-based exploration first, and falls back to a simple
+   * lawnmower coverage trajectory when no frontiers are available.
+   */
   void generateCoverageWaypoints()
   {
-    if (!latest_map_) return;
+    waypoints_ = findFrontierWaypoints();
+    current_waypoint_index_ = 0;
 
-    waypoints_.clear();
+    if (waypoints_.empty()) {
+      RCLCPP_WARN(get_logger(), "No frontiers detected; falling back to lawnmower coverage.");
+      waypoints_ = generateLawnmowerCoverageWaypoints();
+      current_waypoint_index_ = 0;
+      if (waypoints_.empty()) {
+        RCLCPP_WARN(get_logger(), "Fallback coverage generation also produced no waypoints.");
+      } else {
+        RCLCPP_INFO(get_logger(), "Generated %zu fallback coverage waypoints.", waypoints_.size());
+      }
+    } else {
+      RCLCPP_INFO(get_logger(), "Generated %zu frontier-based exploration waypoints.", waypoints_.size());
+    }
+  }
 
-    // Boustrophedon/lawnmower scan pattern over free map cells.
-    // This is simple, predictable, and good enough for a first full-house scanner.
+  /**
+   * Generate a fallback lawnmower coverage path over free map cells.
+   * This is used when frontier-based exploration does not find any goals.
+   */
+  std::vector<Waypoint> generateLawnmowerCoverageWaypoints() const
+  {
+    std::vector<Waypoint> coverage_waypoints;
+    if (!latest_map_) {
+      return coverage_waypoints;
+    }
+
     const int width = static_cast<int>(latest_map_->info.width);
     const int height = static_cast<int>(latest_map_->info.height);
     const int spacing = std::max(1, coverage_spacing_cells_);
@@ -237,32 +488,27 @@ private:
 
       for (const auto & cell : row_cells) {
         Waypoint wp = cellToWorld(cell.x, cell.y);
-
-        // Skip points that are almost duplicates.
-        if (waypoints_.empty() ||
-            std::hypot(wp.x - waypoints_.back().x, wp.y - waypoints_.back().y) > waypoint_spacing_) {
-          waypoints_.push_back(wp);
+        if (coverage_waypoints.empty() ||
+            std::hypot(wp.x - coverage_waypoints.back().x, wp.y - coverage_waypoints.back().y) > waypoint_spacing_) {
+          coverage_waypoints.push_back(wp);
         }
       }
 
       left_to_right = !left_to_right;
     }
 
-    // Start with the nearest waypoint to avoid crossing the house unnecessarily at startup.
-    if (!waypoints_.empty()) {
+    if (!coverage_waypoints.empty()) {
       auto nearest_it = std::min_element(
-        waypoints_.begin(),
-        waypoints_.end(),
+        coverage_waypoints.begin(),
+        coverage_waypoints.end(),
         [this](const Waypoint & a, const Waypoint & b) {
           return std::hypot(a.x - robot_x_, a.y - robot_y_) <
                  std::hypot(b.x - robot_x_, b.y - robot_y_);
         });
-
-      std::rotate(waypoints_.begin(), nearest_it, waypoints_.end());
+      std::rotate(coverage_waypoints.begin(), nearest_it, coverage_waypoints.end());
     }
 
-    current_waypoint_index_ = 0;
-    RCLCPP_INFO(get_logger(), "Generated %zu full-house coverage waypoints.", waypoints_.size());
+    return coverage_waypoints;
   }
 
   bool waypointReached() const
@@ -283,6 +529,11 @@ private:
     cmd_pub_->publish(cmd);
   }
 
+  /**
+   * Main control loop executed on a timer.
+   * It waits for required sensor data, evaluates waypoint progress, and
+   * publishes velocity commands based on obstacle proximity and heading.
+   */
   void controlLoop()
   {
     if (!have_odom_) {
@@ -363,6 +614,8 @@ private:
     cmd_pub_->publish(cmd);
   }
 
+  bool sim_mode_ = false;
+  std::string isaac_namespace_;
   std::string scan_topic_;
   std::string odom_topic_;
   std::string map_topic_;
