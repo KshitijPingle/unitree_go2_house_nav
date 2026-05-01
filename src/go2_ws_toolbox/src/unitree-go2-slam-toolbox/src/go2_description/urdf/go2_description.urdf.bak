@@ -108,7 +108,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/hip.dae" />
+          filename="package://go2_description/dae/FL_hip.dae" />
       </geometry>
       <material
         name="">
@@ -163,7 +163,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/thigh.dae" />
+          filename="package://go2_description/dae/FL_thigh.dae" />
       </geometry>
       <material
         name="">
@@ -218,7 +218,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/calf.dae" />
+          filename="package://go2_description/dae/FL_calf.dae" />
       </geometry>
       <material
         name="">
@@ -302,14 +302,14 @@
         xyz="0 0 0"
         rpy="0 0 0" />
       <mass
-        value="0.04" />
+        value="0" />
       <inertia
-        ixx="9.6e-06"
+        ixx="0"
         ixy="0"
         ixz="0"
-        iyy="9.6e-06"
+        iyy="0"
         iyz="0"
-        izz="9.6e-06" />
+        izz="0" />
     </inertial>
     <visual>
       <origin
@@ -317,7 +317,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/foot.dae" />
+          filename="package://go2_description/dae/FL_foot.dae" />
       </geometry>
       <material
         name="">
@@ -334,7 +334,7 @@
   </link>
   <joint
     name="FL_foot_joint"
-    type="fixed" dont_collapse="true">
+    type="fixed">
     <origin
       xyz="0 0 -0.213"
       rpy="0 0 0" />
@@ -367,7 +367,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/hip.dae" />
+          filename="package://go2_description/dae/FR_hip.dae" />
       </geometry>
       <material
         name="">
@@ -422,7 +422,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/thigh_mirror.dae" />
+          filename="package://go2_description/dae/FR_thigh.dae" />
       </geometry>
       <material
         name="">
@@ -477,7 +477,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/calf_mirror.dae" />
+          filename="package://go2_description/dae/FR_calf.dae" />
       </geometry>
       <material
         name="">
@@ -576,7 +576,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/foot.dae" />
+          filename="package://go2_description/dae/FR_foot.dae" />
       </geometry>
       <material
         name="">
@@ -626,7 +626,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/hip.dae" />
+          filename="package://go2_description/dae/RL_hip.dae" />
       </geometry>
       <material
         name="">
@@ -681,7 +681,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/thigh.dae" />
+          filename="package://go2_description/dae/RL_thigh.dae" />
       </geometry>
       <material
         name="">
@@ -736,7 +736,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/calf.dae" />
+          filename="package://go2_description/dae/RL_calf.dae" />
       </geometry>
       <material
         name="">
@@ -835,7 +835,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/foot.dae" />
+          filename="package://go2_description/dae/RL_foot.dae" />
       </geometry>
       <material
         name="">
@@ -885,7 +885,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/hip.dae" />
+          filename="package://go2_description/dae/RR_hip.dae" />
       </geometry>
       <material
         name="">
@@ -940,7 +940,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/thigh_mirror.dae" />
+          filename="package://go2_description/dae/RR_thigh.dae" />
       </geometry>
       <material
         name="">
@@ -995,7 +995,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/calf_mirror.dae" />
+          filename="package://go2_description/dae/RR_calf.dae" />
       </geometry>
       <material
         name="">
@@ -1094,7 +1094,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/dae/foot.dae" />
+          filename="package://go2_description/dae/RR_foot.dae" />
       </geometry>
       <material
         name="">
