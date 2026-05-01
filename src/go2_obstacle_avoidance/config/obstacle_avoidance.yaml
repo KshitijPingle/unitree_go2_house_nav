@@ -5,11 +5,17 @@ go2_obstacle_avoidance:
     output_cmd_topic: /cmd_vel_safe
     status_topic: /obstacle_avoidance/status
 
-    front_angle_deg: 30.0
-    side_angle_deg: 70.0
+    front_angle_deg: 20.0
+    side_angle_deg: 55.0
 
-    stop_distance: 0.45
-    slow_distance: 0.80
+    stop_distance: 0.60
+    slow_distance: 0.75
+    resume_distance: 0.60
+    turn_timeout: 3.5
+    clear_confirm_cycles: 3
+    min_front_points_for_clear: 6
+    turn_switch_margin: 0.10
+    turn_speed: 1.40
     turn_slow_distance: 0.40
 
     max_linear_scale_when_slow: 0.25

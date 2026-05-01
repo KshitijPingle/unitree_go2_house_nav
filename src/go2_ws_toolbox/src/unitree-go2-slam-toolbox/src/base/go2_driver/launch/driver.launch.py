@@ -39,7 +39,8 @@ def generate_launch_description():
         # 速度消息桥接
         Node(
             package="go2_twist_bridge",
-            executable="twist_bridge"
+            executable="twist_bridge",
+            remappings=[("/cmd_vel", "/cmd_vel_safe")],
         ),
 
         # 添加base_link到base_footprint的动态坐标转换

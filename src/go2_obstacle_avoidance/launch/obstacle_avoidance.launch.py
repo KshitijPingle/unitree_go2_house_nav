@@ -14,7 +14,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='go2_obstacle_avoidance',
-            executable='obstacle_avoidance_node',
+            executable='obstacle_avoidance_node.py',
             name='go2_obstacle_avoidance',
             output='screen',
             parameters=[config]
