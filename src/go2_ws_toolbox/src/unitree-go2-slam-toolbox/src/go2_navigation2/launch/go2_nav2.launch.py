@@ -63,7 +63,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': use_sim_time,
             'autostart': True,
-            'node_names': ['map_server', 'amcl']
+            'node_names': ['map_server', 'amcl', 'map_saver']
         }]
     )
 
@@ -106,6 +106,13 @@ def generate_launch_description():
         ]
     )
 
+    footprint_to_link = Node(
+        package="go2_driver",
+        executable="footprint_to_link",
+        name="footprint_to_link",
+        output="screen"
+    )
+    
     # 包含scan话题
     cloud_launch = IncludeLaunchDescription(
         launch_description_source=PythonLaunchDescriptionSource(
@@ -125,6 +132,29 @@ def generate_launch_description():
             launch_arguments=[("use_joint_state_publisher", "false")] 
             # condition=IfCondition(LaunchConfiguration('use_display'))
         )
+    
+    # add near other actions
+    goal_subscriber_proc = ExecuteProcess(
+        cmd=['python3', '-m', 'go2_goal_nav.goal_subscriber'],
+        cwd='/home/csuf/unitree_go2_house_nav/src/go2_ws_toolbox/src/unitree-go2-slam-toolbox/src/go2_slam',
+        output='screen'
+    )
+
+
+    # --- map_saver ---
+    map_saver = Node(
+        package='nav2_map_server',
+        executable='map_saver_server',
+        name='map_saver',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'save_map_timeout': 5.0,
+            'free_thresh_default': 0.25,
+            'occupied_thresh_default': 0.65
+        }]
+    )
+
 
     return LaunchDescription([
         map_server,
@@ -136,7 +166,8 @@ def generate_launch_description():
         go2_robot_localization,
         rviz2,
         cloud_launch,
-        go2_obstacle_avoidance,
-        go2_driver,
-        go2_display_launch
+        go2_display_launch,
+        goal_subscriber_proc,
+        footprint_to_link,
+        map_saver
     ])
