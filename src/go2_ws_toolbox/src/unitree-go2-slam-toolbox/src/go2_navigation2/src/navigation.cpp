@@ -328,6 +328,10 @@ private:
     frontiers.reserve(goals.size());
     for (const FrontierGoal & goal : goals) {
       frontiers.push_back(goal.waypoint);
+
+      RCLCPP_INFO(this->get_logger(),
+        "New frontier goal selected: x=%.2f y=%.2f travel_cost=%d",
+        goal.waypoint.x, goal.waypoint.y, goal.travel_cost);
     }
 
     return frontiers;
